@@ -1,7 +1,7 @@
 # 5章 データ分析者を支援する
 書籍「現場で活用するための生成AIエージェント実践入門」（講談社サイエンティフィック社）で利用されるソースコード
 
-※ 有料のサービスとして、コード実行を E2B Sandbox、テキスト生成を OpenAI API を用いて行うためお金がかかります。
+※ 有料のサービスとして、コード実行を E2B Sandbox、テキスト生成を Azure OpenAI Service を用いて行うためお金がかかります。
 
 ## 準備
 
@@ -28,7 +28,9 @@ source .venv/bin/activate
 
 ```
 E2B_API_KEY=e2b_***
-OPENAI_API_KEY=sk-proj-***
+AZURE_OPENAI_ENDPOINT="https://<YOUR_AOAI_NAME>.openai.azure.com/"
+AZURE_OPENAI_API_KEY="<YOUR_API_KEY>"
+AZURE_OPENAI_API_VERSION="2024-10-21"
 ```
 
 <details><summary>E2B_API_KEY の設定（クリックで展開）</summary>
@@ -41,13 +43,17 @@ OPENAI_API_KEY=sk-proj-***
 
 </details>
 
-<details><summary>OPENAI_API_KEY の設定（クリックで展開）</summary>
+<details><summary>Azure OpenAI Service の設定（クリックで展開）</summary>
 
-テキスト生成は、OpenAI API を使用します。
+テキスト生成は、Azure OpenAI Service を使用します。
 
-事前に [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys) より、OpenAI Platform にアクセスし、API キーを取得します。取得後は `.env` ファイルの `OPENAI_API_KEY` に値を格納してください。
+事前に Azure OpenAI Service をデプロイし、エンドポイント、API キー、API バージョンを取得します。Azure OpenAI Service のセットアップについては、[Python を使用して OpenAI エンドポイントと Azure OpenAI エンドポイントを切り替える方法](https://learn.microsoft.com/ja-jp/azure/ai-foundry/openai/how-to/switching-endpoints) をご参照ください。
 
-<img src="https://i.gyazo.com/bdbe5fd77930add697f134cd153411c7.png">
+取得後は `.env` ファイルに以下の値を格納してください：
+- `AZURE_OPENAI_ENDPOINT`: Azure OpenAI のエンドポイント URL
+- `AZURE_OPENAI_API_KEY`: Azure OpenAI の API キー  
+- `AZURE_OPENAI_API_VERSION`: Azure OpenAI の API バージョン（例: "2024-10-21"）
+
 </details></br>
 
 ## ディレクトリ構成
