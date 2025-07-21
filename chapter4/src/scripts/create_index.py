@@ -6,16 +6,18 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from openai import OpenAI
+from openai import AzureOpenAI
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 
 class Settings(BaseSettings):
-    openai_api_key: str
-    openai_api_base: str
-    openai_model: str
+    azure_openai_endpoint: str
+    azure_openai_api_key: str
+    azure_openai_api_version: str
+    azure_openai_model_chat: str
+    azure_openai_model_embedding: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -50,7 +52,6 @@ def load_csv_docs(data_dir_path: str) -> list[Document]:
 
 
 def create_keyword_search_index(es: Elasticsearch, index_name: str) -> None:
-
     # インデックスマッピングの定義
     mapping = {
         # ドキュメントのマッピング設定を定義
@@ -119,9 +120,7 @@ def create_vector_search_index(qdrant_client: QdrantClient, index_name: str) -> 
         print(f"Failed to create collection {index_name}")
 
 
-def add_documents_to_es(
-    es: Elasticsearch, index_name: str, docs: list[Document]
-) -> None:
+def add_documents_to_es(es: Elasticsearch, index_name: str, docs: list[Document]) -> None:
     insert_docs = []
 
     for doc in docs:
@@ -148,14 +147,16 @@ def add_documents_to_qdrant(
     settings: Settings,
 ) -> None:
     points = []
-    client = OpenAI(api_key=settings.openai_api_key)
+    client = AzureOpenAI(
+        azure_endpoint=settings.azure_openai_endpoint,
+        api_key=settings.azure_openai_api_key,
+        api_version=settings.azure_openai_api_version,
+    )
 
     for i, doc in enumerate(docs):
         content = doc.page_content
         content = content.replace(" ", "")
-        embedding = client.embeddings.create(
-            model="text-embedding-3-small", input=content
-        )
+        embedding = client.embeddings.create(model=settings.azure_openai_model_embedding, input=content)
         points.append(
             PointStruct(
                 id=i,
