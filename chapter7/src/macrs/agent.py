@@ -1,7 +1,7 @@
 import asyncio
 
 from macrs.configs import Settings
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.pregel import Pregel
 from macrs.models import AgentState, Router
@@ -44,7 +44,7 @@ class UserInputAgent(BaseAgent):
 
 # 質問生成エージェント
 class QuestionAgent(BaseAgent):
-    def __init__(self, client: ChatOpenAI):
+    def __init__(self, client: AzureChatOpenAI):
         self.client = client
 
     async def run(self, state: dict) -> dict:
@@ -53,8 +53,7 @@ class QuestionAgent(BaseAgent):
             {"role": "system", "content": prompt},
             {
                 "role": "user",
-                "content": "ユーザーとの過去の会話履歴："
-                + state["conversation_history"],
+                "content": "ユーザーとの過去の会話履歴：" + state["conversation_history"],
             },
         ]
         response = await self.client.ainvoke(messages)
@@ -66,7 +65,7 @@ class QuestionAgent(BaseAgent):
 
 # レコメンデーション生成エージェント
 class RecommendationAgent(BaseAgent):
-    def __init__(self, client: ChatOpenAI):
+    def __init__(self, client: AzureChatOpenAI):
         self.client = client
 
     async def run(self, state: dict) -> dict:
@@ -75,8 +74,7 @@ class RecommendationAgent(BaseAgent):
             {"role": "system", "content": prompt},
             {
                 "role": "user",
-                "content": "ユーザーとの過去の会話履歴："
-                + state["conversation_history"],
+                "content": "ユーザーとの過去の会話履歴：" + state["conversation_history"],
             },
         ]
         response = await self.client.ainvoke(messages)
@@ -89,7 +87,7 @@ class RecommendationAgent(BaseAgent):
 
 # 雑談エージェント
 class ChitChatAgent(BaseAgent):
-    def __init__(self, client: ChatOpenAI):
+    def __init__(self, client: AzureChatOpenAI):
         self.client = client
 
     async def run(self, state: dict) -> dict:
@@ -97,8 +95,7 @@ class ChitChatAgent(BaseAgent):
             {"role": "system", "content": CHITCHAT_PROMPT},
             {
                 "role": "user",
-                "content": "ユーザーとの過去の会話履歴："
-                + state["conversation_history"],
+                "content": "ユーザーとの過去の会話履歴：" + state["conversation_history"],
             },
         ]
         response = await self.client.ainvoke(messages)
@@ -110,7 +107,7 @@ class ChitChatAgent(BaseAgent):
 
 # プランナーエージェント
 class PlannerAgent(BaseAgent):
-    def __init__(self, client_router: ChatOpenAI):
+    def __init__(self, client_router: AzureChatOpenAI):
         self.client_router = client_router
 
     async def run(self, state: dict) -> dict:
@@ -134,17 +131,24 @@ class PlannerAgent(BaseAgent):
 class MACRS:
     def __init__(self):
         self.settings = Settings()
-        self.model_name = self.settings.OPENAI_MODEL
+        self.model_name = self.settings.azure_openai_model_chat
 
         # Chat OpenAI クライアントのセットアップ
-        self.client = ChatOpenAI(
-            model=self.model_name,
+        self.client = AzureChatOpenAI(
+            azure_endpoint=self.settings.azure_openai_endpoint,
+            api_key=self.settings.azure_openai_api_key,
+            api_version=self.settings.azure_openai_api_version,
+            azure_deployment=self.settings.azure_openai_model_chat,
             verbose=False,
             max_tokens=1024,
             temperature=0,
         )
-        self.client_router = ChatOpenAI(
-            model=self.model_name, temperature=0.7
+        self.client_router = AzureChatOpenAI(
+            azure_endpoint=self.settings.azure_openai_endpoint,
+            api_key=self.settings.azure_openai_api_key,
+            api_version=self.settings.azure_openai_api_version,
+            azure_deployment=self.settings.azure_openai_model_chat,
+            temperature=0.7,
         ).with_structured_output(Router)
 
         # 各エージェントのインスタンス化
@@ -204,9 +208,7 @@ class MACRS:
             "exit": False,
             "selected_agent": "",
         }
-        print(
-            "タスク管理エージェントへようこそ！操作を開始してください（終了するには 'exit' と入力してください）。"
-        )
+        print("タスク管理エージェントへようこそ！操作を開始してください（終了するには 'exit' と入力してください）。")
         # 初回実行
         result = await app.ainvoke(state)
         # exitフラグがセットされていれば処理を中断

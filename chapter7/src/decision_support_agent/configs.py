@@ -2,7 +2,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    OPENAI_API_KEY: str
-    OPENAI_MODEL: str = "gpt-4o"
+    azure_openai_endpoint: str
+    azure_openai_api_key: str
+    azure_openai_api_version: str
+    azure_openai_model_chat: str
+    azure_openai_model_embedding: str
 
-    model_config = SettingsConfigDict(env_file="./chapter7/.env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")

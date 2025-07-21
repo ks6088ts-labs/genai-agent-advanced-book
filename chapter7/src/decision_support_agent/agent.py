@@ -1,19 +1,19 @@
-from decision_support_agent.configs import Settings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langgraph.graph import END, START, StateGraph
 from langgraph.pregel import Pregel
+
+from decision_support_agent.configs import Settings
+from decision_support_agent.custom_logger import setup_logger
 from decision_support_agent.models import AgentResult, AgentState, Improvement, Persona, RolePlayList
 from decision_support_agent.prompts import (
     CONTENT_IMPROVER_PROMPT,
     CONTENTS_ANALYZER_PROMPT,
     CONTENTS_EVALUATOR_PROMPT,
     CONTENTS_LIST,
+    DEFAULT_QUESTIONNAIRE,
     PERSONA_CREATE_SYSTEM_PROMPT,
     PERSONA_GENERATOR_PROMPT,
-    DEFAULT_QUESTIONNAIRE,
 )
-
-from decision_support_agent.custom_logger import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -26,13 +26,11 @@ class BaseAgent:
 
 # ペルソナ生成エージェントのクラス定義
 class PersonaGeneratorAgent(BaseAgent):
-    def __init__(self, client_persona_role: ChatOpenAI, client_persona: ChatOpenAI):
+    def __init__(self, client_persona_role: AzureChatOpenAI, client_persona: AzureChatOpenAI):
         self.client_persona_role = client_persona_role
         self.client_persona = client_persona
 
-    def persona_create_run(
-        self, i, persona_list, persona_profile_list, user_request, target_text
-    ):
+    def persona_create_run(self, i, persona_list, persona_profile_list, user_request, target_text):
         for _ in range(5):
             text_messages = [
                 {"role": "system", "content": PERSONA_CREATE_SYSTEM_PROMPT},
@@ -66,10 +64,7 @@ class PersonaGeneratorAgent(BaseAgent):
             },
             {
                 "role": "user",
-                "content": (
-                    f"ユーザーリクエスト：{state['request']}\n"
-                    f"評価対象コンテンツ：{state['contents']}"
-                ),
+                "content": (f"ユーザーリクエスト：{state['request']}\n評価対象コンテンツ：{state['contents']}"),
             },
         ]
         persona_list = self.client_persona_role.invoke(message).persona_list
@@ -89,7 +84,7 @@ class PersonaGeneratorAgent(BaseAgent):
 
 # コンテンツ評価エージェントのクラス定義
 class ContentsEvaluatorAgent(BaseAgent):
-    def __init__(self, client: ChatOpenAI):
+    def __init__(self, client: AzureChatOpenAI):
         self.client = client
 
     def run(self, state: AgentState) -> AgentState:
@@ -99,9 +94,7 @@ class ContentsEvaluatorAgent(BaseAgent):
             message = [
                 {
                     "role": "system",
-                    "content": CONTENTS_EVALUATOR_PROMPT.format(
-                        persona=persona, questionnaire=state["questionnaire"]
-                    ),
+                    "content": CONTENTS_EVALUATOR_PROMPT.format(persona=persona, questionnaire=state["questionnaire"]),
                 },
                 {
                     "role": "user",
@@ -122,7 +115,7 @@ class ContentsEvaluatorAgent(BaseAgent):
 
 # コンテンツ分析エージェントのクラス定義
 class ContentsAnalyzerAgent(BaseAgent):
-    def __init__(self, client: ChatOpenAI):
+    def __init__(self, client: AzureChatOpenAI):
         self.client = client
 
     def run(self, state: AgentState) -> AgentState:
@@ -134,8 +127,7 @@ class ContentsAnalyzerAgent(BaseAgent):
             {
                 "role": "user",
                 "content": (
-                    f"評価結果: {state['evaluations']}\n"
-                    "上記評価結果に基づき、具体的な改善レポートを作成してください。"
+                    f"評価結果: {state['evaluations']}\n上記評価結果に基づき、具体的な改善レポートを作成してください。"
                 ),
             },
         ]
@@ -147,7 +139,7 @@ class ContentsAnalyzerAgent(BaseAgent):
 
 # コンテンツ改善エージェントのクラス定義
 class ContentImproverAgent(BaseAgent):
-    def __init__(self, client_improver: ChatOpenAI):
+    def __init__(self, client_improver: AzureChatOpenAI):
         self.client_improver = client_improver
 
     def run(self, state: AgentState) -> AgentState:
@@ -176,24 +168,43 @@ class ContentImproverAgent(BaseAgent):
 class DecisionSupportAgent:
     def __init__(self):
         settings = Settings()
-        self.model_name = settings.OPENAI_MODEL
+        self.model_name = settings.azure_openai_model_chat
 
         # 各クライアントの初期化
-        self.client = ChatOpenAI(
-            model=self.model_name,
+        self.client = AzureChatOpenAI(
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_key=settings.azure_openai_api_key,
+            api_version=settings.azure_openai_api_version,
+            azure_deployment=settings.azure_openai_model_chat,
             verbose=False,
             temperature=0,
         )
-        self.client_persona_role = ChatOpenAI(
-            model=self.model_name, temperature=0
+        self.client_persona_role = AzureChatOpenAI(
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_key=settings.azure_openai_api_key,
+            api_version=settings.azure_openai_api_version,
+            azure_deployment=settings.azure_openai_model_chat,
+            temperature=0,
         ).with_structured_output(RolePlayList)
-        self.client_persona = ChatOpenAI(
-            model=self.model_name, temperature=1
+        self.client_persona = AzureChatOpenAI(
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_key=settings.azure_openai_api_key,
+            api_version=settings.azure_openai_api_version,
+            azure_deployment=settings.azure_openai_model_chat,
+            temperature=1,
         ).with_structured_output(Persona)
-        self.client_improver = ChatOpenAI(
-            model=self.model_name, temperature=0
+        self.client_improver = AzureChatOpenAI(
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_key=settings.azure_openai_api_key,
+            api_version=settings.azure_openai_api_version,
+            azure_deployment=settings.azure_openai_model_chat,
+            temperature=0,
         ).with_structured_output(Improvement)
-        self.embeddings = OpenAIEmbeddings()
+        self.embeddings = AzureOpenAIEmbeddings(
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_key=settings.azure_openai_api_key,
+            model=settings.azure_openai_model_embedding,
+        )
         self.default_questionnaire = DEFAULT_QUESTIONNAIRE
 
         # 各エージェントのインスタンス化
@@ -203,9 +214,7 @@ class DecisionSupportAgent:
         )
         self.contents_evaluator = ContentsEvaluatorAgent(client=self.client)
         self.contents_analyzer = ContentsAnalyzerAgent(client=self.client)
-        self.content_improver = ContentImproverAgent(
-            client_improver=self.client_improver
-        )
+        self.content_improver = ContentImproverAgent(client_improver=self.client_improver)
 
     def create_graph(self) -> Pregel:
         """エージェントのメイングラフを作成する
