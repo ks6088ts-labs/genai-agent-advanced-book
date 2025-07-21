@@ -58,10 +58,11 @@ OpenAI APIキーを持っていない場合は、[OpenAIの公式サイト](http
 ```bash
 
 ```env
-# OpenAI API設定
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_API_BASE="https://api.openai.com/v1"
-OPENAI_MODEL= "gpt-4o-2024-08-06"
+AZURE_OPENAI_ENDPOINT="https://<YOUR_AOAI_NAME>.openai.azure.com/"
+AZURE_OPENAI_API_KEY="<YOUR_API_KEY>"
+AZURE_OPENAI_API_VERSION="2024-10-21"
+AZURE_OPENAI_MODEL_CHAT="gpt-4o"
+AZURE_OPENAI_MODEL_EMBEDDING="text-embedding-3-small"
 ```
 
 ### 5. 検索インデックスの構築

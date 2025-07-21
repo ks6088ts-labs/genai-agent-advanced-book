@@ -5,7 +5,7 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 from langgraph.constants import Send
 from langgraph.graph import END, START, StateGraph
 from langgraph.pregel import Pregel
-from openai import OpenAI
+from openai import AzureOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from src.configs import Settings
@@ -56,7 +56,11 @@ class HelpDeskAgent:
         self.tools = tools
         self.tool_map = {tool.name: tool for tool in tools}
         self.prompts = prompts
-        self.client = OpenAI(api_key=self.settings.openai_api_key)
+        self.client = AzureOpenAI(
+            azure_endpoint=self.settings.azure_openai_endpoint,
+            api_key=self.settings.azure_openai_api_key,
+            api_version=self.settings.azure_openai_api_version,
+        )
 
     def create_plan(self, state: AgentState) -> dict:
         """計画を作成する
@@ -87,7 +91,7 @@ class HelpDeskAgent:
         try:
             logger.info("Sending request to OpenAI...")
             response = self.client.beta.chat.completions.parse(
-                model=self.settings.openai_model,
+                model=self.settings.azure_openai_model_chat,
                 messages=messages,
                 response_format=Plan,
                 temperature=0,
@@ -153,7 +157,7 @@ class HelpDeskAgent:
         try:
             logger.info("Sending request to OpenAI...")
             response = self.client.chat.completions.create(
-                model=self.settings.openai_model,
+                model=self.settings.azure_openai_model_chat,
                 messages=messages,
                 tools=openai_tools,  # type: ignore
                 temperature=0,
@@ -246,7 +250,7 @@ class HelpDeskAgent:
         try:
             logger.info("Sending request to OpenAI...")
             response = self.client.chat.completions.create(
-                model=self.settings.openai_model,
+                model=self.settings.azure_openai_model_chat,
                 messages=messages,
                 temperature=0,
                 seed=0,
@@ -291,7 +295,7 @@ class HelpDeskAgent:
         try:
             logger.info("Sending request to OpenAI...")
             response = self.client.beta.chat.completions.parse(
-                model=self.settings.openai_model,
+                model=self.settings.azure_openai_model_chat,
                 messages=messages,
                 response_format=ReflectionResult,
                 temperature=0,
@@ -354,7 +358,7 @@ class HelpDeskAgent:
         try:
             logger.info("Sending request to OpenAI...")
             response = self.client.chat.completions.create(
-                model=self.settings.openai_model,
+                model=self.settings.azure_openai_model_chat,
                 messages=messages,
                 temperature=0,
                 seed=0,
