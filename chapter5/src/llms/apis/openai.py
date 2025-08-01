@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AzureOpenAI
 from pydantic import BaseModel
 
 from src.llms.models.llm_response import LLMResponse
@@ -33,7 +33,11 @@ def generate_response(
 ) -> LLMResponse:
     assert model in COST, f"Invalid model name: {model}"
     content_idx = 1 if model.startswith(("o1", "o3")) else 0
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = AzureOpenAI(
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    )
     # LLM呼び出し
     if response_format is None:
         # Chat Completion
